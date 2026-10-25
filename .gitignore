@@ -5,3 +5,4 @@ node_modules
 .hltv-demo.tsv
 *.log
 .DS_Store
+rust/target

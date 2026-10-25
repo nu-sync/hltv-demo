@@ -1,0 +1,4 @@
+[alias]
+# Development automation: `cargo xtask live-check`, `cargo xtask capture-fixtures [--trim]`,
+# `cargo xtask mcp-call <tool> ['{json}']`. See xtask/src/main.rs.
+xtask = "run --quiet --package xtask --"
