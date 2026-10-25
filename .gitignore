@@ -1,2 +1,7 @@
 node_modules
 .live-checks
+*.rar
+*.dem
+.hltv-demo.tsv
+*.log
+.DS_Store

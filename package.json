@@ -1,18 +1,31 @@
 {
   "name": "hltv-demo",
   "version": "0.1.0",
-  "description": "Find and download HLTV demo archives through a real browser",
+  "description": "Find and download professional CS2 demo archives from hltv.org through a real browser",
   "type": "module",
   "bin": {
     "hltv-demo": "./src/cli.ts",
     "hltv-demo-mcp": "./src/mcp.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./mcp": "./src/mcp.ts"
+  },
+  "files": [
+    "src",
+    "SPEC.md",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.4.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "fixtures": "bun run scripts/capture-fixtures.ts",
     "mcp": "bun run src/mcp.ts",
-    "check": "tsc --noEmit && bun test"
+    "check": "tsc --noEmit && bun test",
+    "live": "bash scripts/live-check.sh"
   },
   "dependencies": {
     "@effect/platform-bun": "^4.0.6",
@@ -24,13 +37,20 @@
     "@types/bun": "^1.4.4",
     "typescript": "^7.0.2"
   },
-  "exports": {
-    ".": "./src/index.ts",
-    "./mcp": "./src/mcp.ts"
-  },
-  "files": [
-    "src",
-    "SPEC.md",
-    "README.md"
-  ]
+  "keywords": [
+    "hltv",
+    "counter-strike",
+    "cs2",
+    "demo",
+    "demos",
+    "mcp",
+    "cli",
+    "playwright",
+    "bun"
+  ],
+  "homepage": "https://github.com/wcygan/hltv-demo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wcygan/hltv-demo.git"
+  }
 }

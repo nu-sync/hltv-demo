@@ -77,8 +77,9 @@ MCP ─┘        src/hltv/*        src/source.ts   src/browser.ts
 | `src/mcp.ts` | `Tool`/`Toolkit` handlers and the stdio `McpServer` layer |
 | `src/index.ts` | public library surface |
 | `test/unit/`, `test/mcp/`, `test/cli/`, `test/fixture/` | see Testing |
-| `scripts/live-check.sh` | both entry points against live hltv.org |
-| `scripts/capture-fixtures.ts` | refresh the saved HTML the fixture tests read |
+| `scripts/live-check.sh` | thin shell entry point for the live end-to-end run |
+| `scripts/live-check.ts` | the live checks: discovers a target on `/results`, drives both transports |
+| `scripts/capture-fixtures.ts` | re-capture and trim the saved HTML the fixture tests read |
 | `scripts/mcp-call.ts` | call one MCP tool from a shell |
 
 ## Commands
@@ -92,8 +93,9 @@ bun run src/cli.ts search --team 9565 --map de_cache --limit 3 --json
 bun run src/cli.ts download 'https://www.hltv.org/results?team=9565&map=de_inferno' --limit 2
 bun run src/mcp.ts                            # MCP over stdio
 bun run scripts/mcp-call.ts search_matches '{"team":9565,"map":"de_cache","limit":2}'
-bun run scripts/capture-fixtures.ts           # re-save the fixtures (headed Chrome)
-scripts/live-check.sh                         # 27 checks, needs network + Chrome
+bun run scripts/capture-fixtures.ts           # re-capture + trim the fixtures (headed Chrome)
+bun run scripts/capture-fixtures.ts --trim    # re-trim only (headless, offline)
+scripts/live-check.sh                         # 25 live checks, needs network + Chrome (~30 s)
 ```
 
 Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequisite.
@@ -120,7 +122,9 @@ Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequi
 - **Normalize paths once.** `out` is canonicalized in `get` and in the MCP handlers; macOS `TMPDIR` ends
   in `/`, so unnormalized paths differ by `//`.
 - **Never commit** archives (`*.rar`), demos (`*.dem`), manifests, `.live-checks/`, or `node_modules`.
-  Tests use temp folders; `live-check.sh` cleans up after itself and keeps only its evidence.
+  `.gitignore` covers each of them; if you add a produced artifact, add it there, not to this list.
+  Tests use temp folders; `live-check.sh` deletes its archive unless `LIVE_KEEP=1`, and keeps only its
+  evidence (`summary.txt`, `evidence.json`) under `.live-checks/`.
 - **Do not crawl, and do not raise the limits.** Both transports cap a search at 100 matches (`--offset`
   pages); `download` takes one match unless `--limit` says otherwise. Politeness is a requirement, not
   a default.
@@ -134,16 +138,18 @@ Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequi
 | `test/mcp/protocol.test.ts` | the server speaks MCP over stdio: `tools/list`, `tools/call`, error results | nothing |
 | `test/cli/cli.test.ts` | the real subprocess: exit codes, messages, off-site URL refused without a browser | nothing |
 | `test/fixture/*` | the production extractors still match saved hltv.org HTML | Chrome |
-| `scripts/live-check.sh` | both transports against live hltv.org, sharing one manifest | network + Chrome |
+| `scripts/live-check.sh` | both transports against the newest match on `/results`, sharing one manifest | network + Chrome |
 
 When HLTV's markup changes, a fixture test fails, not a download. Refresh with
-`bun run scripts/capture-fixtures.ts` and review the diff.
+`bun run scripts/capture-fixtures.ts` and review the diff: it writes *trimmed* pages (subtrees the
+extractors read, attributes allow-listed, no scripts or comments), and refuses to write one that lost its
+anchor or is still a challenge page, so a bad capture cannot replace a good fixture.
 
 ## Before claiming a change works
 
 ```bash
 bun run check          # types + 58 tests
-scripts/live-check.sh  # 27 checks; exit 2 means a prerequisite is missing (a coverage gap, not a pass)
+scripts/live-check.sh  # 25 checks; exit 2 means a prerequisite is missing (a coverage gap, not a pass)
 ```
 
 If a change touches the browser layer, selectors, the manifest, or either transport, `live-check.sh` is

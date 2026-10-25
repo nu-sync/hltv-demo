@@ -198,8 +198,8 @@ stale-`readyState` failure impossible rather than merely detected.
 1. **Unit (`bun test test/unit`)** — pure modules and the operations against a fake `Source`, no
    browser: URL classification, page keys, dates, manifest round-trip and invalidation, profile lock,
    search/dedupe/limit, resolve, and every `get` path (skip, no demo, download failure, filter kept).
-2. **Fixture (`bun test test/fixture`)** — real HTML captured from hltv.org, loaded into a headless
-   page with `setContent`, and read with the production extractors. No network, no challenge. This is
+2. **Fixture (`bun test test/fixture`)** — real HTML captured from hltv.org and trimmed, loaded into a
+   headless page with `setContent`, and read with the production extractors. No network, no challenge. This is
    the drift alarm for HLTV markup: `bun run scripts/capture-fixtures.ts` refreshes the fixtures, and
    a selector change fails a test instead of failing in production.
 3. **MCP protocol (`bun test test/mcp`)** — tool handlers with a fake browser, then the real server as a
@@ -207,12 +207,22 @@ stale-`readyState` failure impossible rather than merely detected.
    continued health after an error.
 4. **CLI (`bun test test/cli`)** — the real subprocess: usage errors exit 2, domain failures exit 1,
    `--help` exits 0, off-site URLs fail before a browser opens.
-5. **Live check (`scripts/live-check.sh`)** — both entry points against hltv.org: search, resolve,
-   download, repeat-skip, then the same archive through MCP, sharing one manifest. Needs network and
-   Chrome; exit 2 when a prerequisite is missing.
+5. **Live check (`scripts/live-check.sh` → `scripts/live-check.ts`)** — the only end-to-end run, and it
+   discovers its target instead of naming one: read the newest `/results` page, walk the candidates
+   until a match publishes a demo, then assert that match through the CLI (`search`, `resolve`,
+   `download`, repeat-skip) and through the MCP server (all four tools, over stdio, through the official
+   client), both sharing one folder and one manifest. A hardcoded match URL rots when its demo is
+   removed; a discovered one keeps the assertion honest. Needs network and Chrome; exit 2 when a
+   prerequisite is missing, which includes Cloudflare's challenge and a held profile.
 
-Fixtures are trimmed to the relevant subtrees before being committed; they are page structure, not
-content dumps.
+Fixtures are trimmed to the subtrees the extractors read, as part of capture rather than as a cleanup
+step: `scripts/capture-fixtures.ts` prunes to `.results-sublist`, `.result-con`, `.timeAndEvent`,
+`.streams`, and the demo anchor, drops scripts, comments, ads and tracking pixels, and reduces every
+attribute to an allow-list (`class`, `href`, `src`, `alt`, `title`, `data-unix`, `data-demo-link`,
+`data-time-format`). The two files are 57 KB together, down from 746 KB of page dumps, and the script
+refuses to write an output that still carries `<script`, a comment, a tracker, or a per-visitor
+attribute — or one that lost the anchor it exists to test, so a Cloudflare challenge page can never
+overwrite a fixture. `--trim` re-trims the saved files offline and headless.
 
 ## Legal
 
@@ -231,7 +241,8 @@ profile. Respect removal requests from the site.
 | repeat `download <match>` | `skip`, 0.8 s |
 | `download 'results?team=9565&map=de_inferno' --limit 2` | 746 MB + 444 MB in 23 s, the two Vitality matches the filter names |
 | `bun test` | 58 pass (units, fixtures, tool handlers, MCP protocol, CLI) |
-| `scripts/live-check.sh` | 27/27 in 30 s, including the MCP tools over stdio |
+| `bun run scripts/capture-fixtures.ts --trim` | 205 KB → 54 KB and 541 KB → 3 KB, 5/5 fixture tests still pass |
+| `scripts/live-check.sh` | 25/25 in 31 s, target discovered on `/results` (G2 vs NAVI), 703 MB, 2 `.dem`, MCP reusing the CLI's archive |
 | downstream sanity | `nades ingest` read the archive's map and event from HLTV's file name |
 | MCP `search_matches`, `list_downloads`, `download_demo` | answered over stdio; `download_demo` skipped the archive the CLI had just written |
 
