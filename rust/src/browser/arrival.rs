@@ -7,7 +7,7 @@ use std::time::Duration;
 use crate::core::errors::HltvError;
 use crate::core::url::page_key;
 
-/// How long a read may take from navigation to reader, as Playwright's per-step timeout did.
+/// How long a read may take from navigation to reader.
 pub const PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 /// How long a challenge may stand before it is reported. Cloudflare's managed challenge often clears
 /// itself in a headed browser, and a person watching the window can answer it in this time.

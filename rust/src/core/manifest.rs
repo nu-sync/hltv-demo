@@ -1,6 +1,6 @@
 //! `<out>/.hltv-demo.tsv` maps a demo URL to the file it produced, so a repeat fetch does not pull
 //! hundreds of megabytes again. A line whose file is gone is ignored, which makes deleting the archive
-//! the way to re-fetch it. The format is the TypeScript version's, so both share one folder.
+//! the way to re-fetch it. The format has not changed since v0.1, so older folders keep working.
 
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};
@@ -127,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn the_file_is_the_typescript_versions_format() {
+    fn the_line_format_is_unchanged_since_v0_1() {
         let dir = tempfile::tempdir().unwrap();
         record(
             dir.path(),

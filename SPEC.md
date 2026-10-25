@@ -10,10 +10,8 @@ download URL    ──► │  src/hltv/*              ──► .rar on disk   
                     └── MCP server (src/mcp.rs, bin hltv-demo-mcp, stdio)
 ```
 
-Status: v0.2, 2026-10-25. The Rust crate in [`rust/`](rust/) is the production implementation, and
-paths in this document are relative to it. The TypeScript implementation at the repository root
-(`src/`, `test/`, `scripts/`, `package.json`) is the previous version: at parity, sharing the same
-profile, lock, and manifest, and kept only until it is retired. Everything under
+Status: v0.2, 2026-10-25. The implementation is the Rust crate in [`rust/`](rust/), and paths in
+this document are relative to it; it replaced the TypeScript implementation (v0.1) that day. Everything under
 [Verified facts](#verified-facts) was measured against live hltv.org; everything else is design. What
 is still unproven is listed under [Open questions](#open-questions) — it is not implied by the checks
 below.
@@ -228,9 +226,9 @@ How the browser layer works:
   cancels the download in the browser and fails it. While a demo URL has not turned into a download,
   a document in the page (the challenge, or an HLTV page) is waited on for 30 s, then reported.
 - **Launch switches replace chromiumoxide's defaults**, which include `--enable-automation`. The
-  keychain switches (`--use-mock-keychain`, `--password-store=basic`) are Playwright's too, and must
-  stay: Chrome encrypts the profile's cookies, Cloudflare's clearance among them, with the key they
-  select, and both implementations share the profile.
+  keychain switches (`--use-mock-keychain`, `--password-store=basic`) must stay: Chrome encrypts the
+  profile's cookies, Cloudflare's clearance among them, with the key they select, so changing them
+  loses every cookie an existing profile holds. The TypeScript version launched Chrome the same way.
 - **Errors are values.** Every operation returns `Result<_, HltvError>`; nothing is thrown, so an MCP
   client never sees an internal error for a domain failure, and the CLI maps a panic to exit 1 rather
   than Rust's 101. There is no automatic retry: a `Challenge` must not be retried, and retrying a
@@ -288,11 +286,11 @@ profile. Respect removal requests from the site.
 
 ## Decisions
 
-v0.2 (2026-10-25), each a deliberate difference from the TypeScript version:
+v0.2 (2026-10-25), each a deliberate difference from the TypeScript version it replaced:
 
-- **Rust is the production implementation.** The TypeScript one stays in the repository until it is
-  retired. Both use the same profile, lock file, and manifest format, so they exclude each other and
-  share an archive folder.
+- **Rust replaces TypeScript.** The TypeScript version was removed once this one matched it test for
+  test and passed the live check. The profile, its lock file, and the manifest format are unchanged,
+  so profiles and archive folders it created keep working.
 - **A map name that cannot be one is `NotAMap`**, refused before Chrome opens: a usage error on the
   CLI, a tool failure over MCP. TypeScript threw a defect after launching Chrome (open decision D2).
 - **Launch failures stay `BrowserMissing`** (open decision D5), with one exception: a profile that
@@ -314,7 +312,7 @@ v0.2 (2026-10-25), each a deliberate difference from the TypeScript version:
 - **MCP numbers are integers.** TypeScript's schema said `number`; a fraction is now a parameter
   error, and a negative value reads as 0.
 - **Development tooling is `cargo xtask`**, a workspace member that never ships:
-  `live-check`, `capture-fixtures`, `mcp-call` replace the three `scripts/*.ts`.
+  `live-check`, `capture-fixtures`, and `mcp-call`, in place of the TypeScript scripts.
 
 ## Verified runs
 
@@ -356,4 +354,3 @@ v0.1 (TypeScript), 2026-10-24:
   (exit 1) rather than `BrowserMissing` (exit 2)?
 - A lazy browser (Chrome opened on the first `Source` call) would let a repeat `download` of a demo
   URL skip launching Chrome at all; it changes what users see, so it is still a proposal.
-- When to retire the TypeScript implementation and move the crate to the repository root.

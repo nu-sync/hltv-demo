@@ -292,7 +292,7 @@ fn now_secs() -> i64 {
         .map_or(0, |d| d.as_secs() as i64)
 }
 
-/// The run's name: UTC time to the second, then the pid, as the TypeScript check named them.
+/// The run's name: UTC time to the second, then the pid, so runs sort by when they started.
 fn run_name() -> String {
     let secs = now_secs();
     let (y, m, d) = civil_from_days(secs.div_euclid(86_400));

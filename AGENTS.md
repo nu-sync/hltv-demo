@@ -10,10 +10,8 @@ It is deliberately generic: no demo parsing, no database, no knowledge of a down
 Anything that reads `<event>-<team>-vs-<team>-bo<n>-<id>.rar` can use the output, and the manifest
 next to it says which demo URL produced which file.
 
-**The production implementation is the Rust crate in [`rust/`](rust/); every path below is relative
-to it unless it says otherwise.** The TypeScript implementation at the repository root (`src/`,
-`test/`, `scripts/`, `package.json`) is the previous version, kept at parity until it is retired.
-Do not add behavior there; if it must change, change Rust first and keep the two in step.
+**The implementation is the Rust crate in [`rust/`](rust/); every path below is relative to it
+unless it says otherwise.**
 
 Three entry points, one core:
 
@@ -120,9 +118,10 @@ signal `n` stopped the run.
   line and stops. That is the design, not a gap.
 - **The browser is headed, one process per profile.** `src/core/lock.rs` enforces it; do not remove it
   to "fix" a hang. Two runs sharing a profile mix their downloads.
-- **Keep the launch switches Playwright-compatible.** `--use-mock-keychain` and
-  `--password-store=basic` decide how Chrome encrypts the profile's cookies; both implementations
-  share the profile. chromiumoxide adds the `--` itself: pass `"no-first-run"`, never `"--no-first-run"`.
+- **Keep the keychain switches.** `--use-mock-keychain` and `--password-store=basic` decide how
+  Chrome encrypts the profile's cookies; changing them loses every cookie an existing profile holds,
+  Cloudflare's clearance included. chromiumoxide adds the `--` itself: pass `"no-first-run"`, never
+  `"--no-first-run"`.
 - **Never rename a downloaded archive.** The file name is HLTV's, and downstream tools parse the event
   out of it. It comes from `downloadWillBegin`'s `suggested_filename`.
 - **A results URL keeps its own filter.** `results?team=…&map=…` must never widen to `/results`;
@@ -140,8 +139,8 @@ signal `n` stopped the run.
   `shutdown_timeout`: dropping the runtime would wait forever on the stdin read.
 - **Normalize paths once.** `out` is canonicalized by `canonical_out` in `get` and in the
   `list_downloads` handler; macOS `TMPDIR` ends in `/`, so unnormalized paths differ by `//`.
-- **Never commit** archives (`*.rar`), demos (`*.dem`), manifests, `.live-checks/`, `target/`, or
-  `node_modules`. `.gitignore` covers each of them; if you add a produced artifact, add it there, not
+- **Never commit** archives (`*.rar`), demos (`*.dem`), manifests, `.live-checks/`, or `target/`.
+  `.gitignore` covers each of them; if you add a produced artifact, add it there, not
   to this list. Tests use temp folders; the live check deletes its archive unless `LIVE_KEEP=1`, and
   keeps only its evidence (`summary.txt`, `evidence.json`) under `.live-checks/`.
 - **Do not crawl, and do not raise the limits.** `search` caps a list at `MAX_LIMIT` (100) matches, so

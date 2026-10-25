@@ -81,8 +81,8 @@ fn failed(cause: impl std::fmt::Display) -> HltvError {
 
 /// Switches every launch shares, as chromiumoxide spells them: without the leading `--`, which it
 /// adds. Its defaults are replaced rather than extended because they include `--enable-automation`.
-/// The keychain switches are Playwright's too, and they matter: Chrome encrypts the profile's cookies
-/// (Cloudflare's clearance among them) with the key they select, so both implementations must agree.
+/// The keychain switches matter: Chrome encrypts the profile's cookies (Cloudflare's clearance among
+/// them) with the key they select, so changing them loses every cookie an existing profile holds.
 const BASE_SWITCHES: [&str; 3] = [
     "no-first-run",
     "no-default-browser-check",

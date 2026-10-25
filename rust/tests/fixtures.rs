@@ -1,7 +1,7 @@
 //! Selector drift alarm. The production readers run against real HTML saved from hltv.org, inside a
 //! headless Chrome with the network switched off. Refresh the pages with
 //! `cargo xtask capture-fixtures`; when a selector stops matching, the failure is here rather than in
-//! a user's download. Needs Chrome; without it each test says so and passes, as `skipIf` did.
+//! a user's download. Needs Chrome; without it each test says so and passes.
 
 use std::path::Path;
 

@@ -22,8 +22,8 @@ pub fn default_out() -> PathBuf {
 }
 
 /// One canonical folder, so every path a run reports is the same string: absolute, with `.`, `..`,
-/// and doubled or trailing slashes resolved lexically, as Node's `path.resolve` does. macOS `TMPDIR`
-/// ends in `/`, so an unnormalized join would differ by `//`. Symlinks are left alone.
+/// and doubled or trailing slashes resolved lexically. macOS `TMPDIR` ends in `/`, so an
+/// unnormalized join would differ by `//`. Symlinks are left alone.
 pub fn canonical_out(out: Option<&Path>) -> PathBuf {
     let out = out.map(Path::to_path_buf).unwrap_or_else(default_out);
     let absolute = if out.is_absolute() {

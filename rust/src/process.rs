@@ -44,8 +44,8 @@ impl fmt::Display for Signal {
 }
 
 /// Resolves when the process is asked to stop. A binary that receives it drops its work, which
-/// closes Chrome and releases the profile lock, as Playwright's handlers did for the TypeScript
-/// version; without this a Ctrl-C would leave Chrome holding the profile.
+/// closes Chrome and releases the profile lock; without this a Ctrl-C would leave Chrome holding the
+/// profile.
 #[cfg(unix)]
 pub async fn shutdown() -> Signal {
     use tokio::signal::unix::{SignalKind, signal};

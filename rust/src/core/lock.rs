@@ -1,7 +1,6 @@
 //! One process may drive the shared Chrome profile at a time. A second one would either fail to
 //! launch or attach to the first browser, and then downloads and pages cross over. The lock is a file
-//! holding a pid, and a pid that no longer runs is treated as a crash, not a holder. The file and its
-//! format are the TypeScript version's, so the two implementations exclude each other too.
+//! holding a pid, and a pid that no longer runs is treated as a crash, not a holder.
 
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};

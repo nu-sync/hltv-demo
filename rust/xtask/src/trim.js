@@ -1,6 +1,5 @@
-// Trim a page to the subtrees the extractors read, then serialize it as Playwright's page.content()
-// does. Evaluated inside the page, so it may not close over anything: the same rule as the readers.
-// Ported from scripts/capture-fixtures.ts, rule for rule.
+// Trim a page to the subtrees the readers use, then serialize it: the doctype, then the root element.
+// Evaluated inside the page, so it may not close over anything: the same rule as the readers.
 (() => {
   const serialize = () =>
     (document.doctype ? new XMLSerializer().serializeToString(document.doctype) : "") +

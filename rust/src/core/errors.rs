@@ -11,7 +11,7 @@ pub enum HltvError {
     /// hltv.org, but not a page this tool reads.
     #[error("{url} is not a match, results, or demo URL")]
     UnsupportedPage { url: String },
-    /// A map filter that cannot be a map name. The TypeScript version throws a defect here (D2).
+    /// A map filter that cannot be a map name; refused before a browser opens.
     #[error("{map} is not a map name")]
     NotAMap { map: String },
     /// Cloudflare answered with its challenge instead of the page. Only a person can clear it.

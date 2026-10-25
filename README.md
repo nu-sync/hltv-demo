@@ -12,9 +12,7 @@ A CLI, a [library](#library), and an [MCP server](#mcp-server) over the same ope
 keep HLTV's own file names (`<event>-<team>-vs-<team>-bo<n>-<id>.rar`), so whatever reads them
 downstream needs to know nothing about this tool.
 
-The implementation is the Rust crate in [`rust/`](rust/). The TypeScript one at the repository
-root (`src/`, `package.json`) is the previous version, at parity and kept until it is retired; the
-two share the Chrome profile, its lock, and the download manifest.
+The implementation is the Rust crate in [`rust/`](rust/).
 
 ## Install
 
