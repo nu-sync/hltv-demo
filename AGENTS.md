@@ -10,9 +10,6 @@ It is deliberately generic: no demo parsing, no database, no knowledge of a down
 Anything that reads `<event>-<team>-vs-<team>-bo<n>-<id>.rar` can use the output, and the manifest
 next to it says which demo URL produced which file.
 
-**The implementation is the Rust crate in [`rust/`](rust/); every path below is relative to it
-unless it says otherwise.**
-
 Three entry points, one core:
 
 - **CLI** — `hltv-demo search | resolve | download` (`src/cli.rs`, clap).
@@ -71,7 +68,7 @@ MCP ─┘        src/hltv/*         src/source.rs  src/browser.rs
 
 | Path | Role |
 |---|---|
-| `../SPEC.md` | verified facts, invariants, error table, architecture, decisions, open questions |
+| `SPEC.md` | verified facts, invariants, error table, architecture, decisions, open questions |
 | `src/core/` | rules and small helpers, no browser and no network: `url`, `dates`, `manifest`, `lock`, `errors`, `types` |
 | `src/browser.rs` | the only chromiumoxide module: launch, `Session`, `Offline`, page reads, download |
 | `src/browser/arrival.rs` | what one probe of a page means (wait, read, fail), with no browser |
@@ -88,8 +85,6 @@ MCP ─┘        src/hltv/*         src/source.rs  src/browser.rs
 | `scripts/live-check.sh` | thin shell entry point for the live end-to-end run |
 
 ## Commands
-
-Run from `rust/`.
 
 ```bash
 cargo build                                   # no browser download: chromiumoxide drives the installed Chrome

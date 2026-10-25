@@ -12,12 +12,10 @@ A CLI, a [library](#library), and an [MCP server](#mcp-server) over the same ope
 keep HLTV's own file names (`<event>-<team>-vs-<team>-bo<n>-<id>.rar`), so whatever reads them
 downstream needs to know nothing about this tool.
 
-The implementation is the Rust crate in [`rust/`](rust/).
-
 ## Install
 
 ```bash
-cargo install --path rust          # hltv-demo and hltv-demo-mcp into ~/.cargo/bin
+cargo install --path .             # hltv-demo and hltv-demo-mcp into ~/.cargo/bin
 hltv-demo --help
 ```
 
@@ -107,7 +105,7 @@ and close it after, so an idle server holds no window. The CLI and the server sh
 so an archive fetched by one is skipped by the other.
 
 ```bash
-cd rust && cargo xtask mcp-call search_matches '{"team":9565,"map":"de_cache","limit":2}'
+cargo xtask mcp-call search_matches '{"team":9565,"map":"de_cache","limit":2}'
 ```
 
 ## Behaviour worth knowing
@@ -143,8 +141,6 @@ however the work ends. Everything fails with `HltvError`: `NotHltvUrl`, `Unsuppo
 `BrowserFailed`, `ProfileBusy`, `Unreachable`, `ManifestUnreadable` — each with `remediation()`.
 
 ## Development
-
-From `rust/`:
 
 ```bash
 cargo test --workspace                   # 97 tests

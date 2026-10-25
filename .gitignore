@@ -4,4 +4,4 @@
 .hltv-demo.tsv
 *.log
 .DS_Store
-rust/target
+/target

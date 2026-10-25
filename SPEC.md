@@ -10,8 +10,8 @@ download URL    ──► │  src/hltv/*              ──► .rar on disk   
                     └── MCP server (src/mcp.rs, bin hltv-demo-mcp, stdio)
 ```
 
-Status: v0.2, 2026-10-25. The implementation is the Rust crate in [`rust/`](rust/), and paths in
-this document are relative to it; it replaced the TypeScript implementation (v0.1) that day. Everything under
+Status: v0.2, 2026-10-25. This Rust crate replaced the TypeScript implementation (v0.1) that day.
+Everything under
 [Verified facts](#verified-facts) was measured against live hltv.org; everything else is design. What
 is still unproven is listed under [Open questions](#open-questions) — it is not implied by the checks
 below.
@@ -328,7 +328,7 @@ v0.2 (Rust), 2026-10-25:
 | SIGINT during a real download | exit 130 at 7 MB; no `.crdownload` left, lock released, no Chrome on the profile |
 | `cargo test --workspace` | 97 pass: unit, operations, fixtures, MCP in-process and over stdio, CLI, signals, doctest, xtask |
 | `cargo xtask capture-fixtures --trim` | both fixtures byte-identical to the TypeScript capture |
-| `cargo install --path rust` | installs `hltv-demo` and `hltv-demo-mcp` |
+| `cargo install --path .` | installs `hltv-demo` and `hltv-demo-mcp` |
 
 v0.1 (TypeScript), 2026-10-24:
 
