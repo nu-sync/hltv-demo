@@ -1,4 +1,5 @@
-import { closeSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs"
+import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs"
+import { dirname } from "node:path"
 
 /**
  * One process may drive the shared Chrome profile at a time. A second one would either fail to launch
@@ -8,6 +9,8 @@ import { closeSync, openSync, readFileSync, unlinkSync, writeSync } from "node:f
 export type Lock = { path: string; release: () => void }
 
 export const acquire = (path: string): Lock | "busy" => {
+  // On a first run the profile's folder does not exist yet, and the lock is the first thing to need it.
+  mkdirSync(dirname(path), { recursive: true })
   for (const attempt of [0, 1]) {
     try {
       const fd = openSync(path, "wx")

@@ -87,7 +87,7 @@ MCP ─┘        src/hltv/*        src/source.ts   src/browser.ts
 ```bash
 bun install                                   # dependencies; no browser download (playwright-core drives Chrome)
 bun run check                                 # tsc --noEmit && bun test
-bun test                                      # 58 tests
+bun test                                      # 63 tests
 bun run src/cli.ts --help
 bun run src/cli.ts search --team 9565 --map de_cache --limit 3 --json
 bun run src/cli.ts download 'https://www.hltv.org/results?team=9565&map=de_inferno' --limit 2
@@ -119,15 +119,15 @@ Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequi
 - **Keep Playwright in `src/browser.ts`.** Nothing else may open a browser or reach the network.
   `src/core/*` holds rules plus the two small filesystem helpers (`manifest`, `lock`); operations take
   a `Source`, never a `Session`, so they can be tested without Chrome.
-- **Normalize paths once.** `out` is canonicalized in `get` and in the MCP handlers; macOS `TMPDIR` ends
-  in `/`, so unnormalized paths differ by `//`.
+- **Normalize paths once.** `out` is canonicalized in `get` and in the `list_downloads` handler; macOS
+  `TMPDIR` ends in `/`, so unnormalized paths differ by `//`.
 - **Never commit** archives (`*.rar`), demos (`*.dem`), manifests, `.live-checks/`, or `node_modules`.
   `.gitignore` covers each of them; if you add a produced artifact, add it there, not to this list.
   Tests use temp folders; `live-check.sh` deletes its archive unless `LIVE_KEEP=1`, and keeps only its
   evidence (`summary.txt`, `evidence.json`) under `.live-checks/`.
-- **Do not crawl, and do not raise the limits.** Both transports cap a search at 100 matches (`--offset`
-  pages); `download` takes one match unless `--limit` says otherwise. Politeness is a requirement, not
-  a default.
+- **Do not crawl, and do not raise the limits.** `search` caps a list at `MAX_LIMIT` (100) matches, so
+  the library and both transports do (`--offset` pages); `download` takes one match unless `--limit`
+  says otherwise, and `get` owns the delay between matches. Politeness is a requirement, not a default.
 
 ## Testing
 
@@ -148,7 +148,7 @@ anchor or is still a challenge page, so a bad capture cannot replace a good fixt
 ## Before claiming a change works
 
 ```bash
-bun run check          # types + 58 tests
+bun run check          # types + 63 tests
 scripts/live-check.sh  # 25 checks; exit 2 means a prerequisite is missing (a coverage gap, not a pass)
 ```
 

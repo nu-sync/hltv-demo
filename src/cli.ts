@@ -5,12 +5,13 @@
  * Exit codes: 0 success, 1 a domain failure, 2 usage error or missing prerequisite.
  */
 import { Effect } from "effect"
-import { BrowserMissing, ProfileBusy, explain, type HltvError } from "./core/errors.ts"
+import { explain, type HltvError } from "./core/errors.ts"
+import type { Match } from "./core/types.ts"
 import { classifyOrFail } from "./classify.ts"
 import { withSource } from "./source.ts"
-import { search } from "./hltv/search.ts"
-import { resolve as resolveDemo } from "./hltv/resolve.ts"
 import { get } from "./hltv/get.ts"
+import { resolve } from "./hltv/resolve.ts"
+import { MAX_LIMIT, search } from "./hltv/search.ts"
 
 const USAGE = `hltv-demo — find and download HLTV demo archives
 
@@ -23,44 +24,32 @@ usage:
 urls: a match page, a results page, or /download/demo/<id>
 env:  CHROME=/path/to/chrome  HLTV_DEMO_PROFILE=/path/to/profile  HLTV_DEMO_OUT=/path`
 
-type Command = "search" | "resolve" | "download"
-
-type Flags = {
-  command: Command | "help"
-  url?: string
+type Options = {
   team?: number
   map?: string
-  limit: number
+  limit?: number
   offset?: number
-  out: string
-  delayMs: number
+  out?: string
+  delayMs?: number
   headless: boolean
   json: boolean
 }
+
+/** A command line that parsed: `resolve` and `download` always carry their URL. */
+type Flags = Options & ({ command: "search" } | { command: "resolve" | "download"; url: string })
 
 function usage(message: string): never {
   console.error(`hltv-demo: ${message}\n\n${USAGE}`)
   process.exit(2)
 }
 
-const defaultOut = (): string =>
-  process.env.HLTV_DEMO_OUT ?? `${process.env.HOME}/.cache/hltv-demo/archives`
+const parse = (argv: string[]): Flags | "help" => {
+  const [command = "--help", ...rest] = argv
+  if (command === "--help" || command === "-h" || command === "help") return "help"
+  if (command !== "search" && command !== "resolve" && command !== "download") usage(`unknown command: ${command}`)
 
-const parse = (argv: string[]): Flags => {
-  const [first = "--help", ...rest] = argv
-  if (first === "--help" || first === "-h" || first === "help") {
-    return { command: "help", limit: 1, out: defaultOut(), delayMs: 2000, headless: false, json: false }
-  }
-  if (!["search", "resolve", "download"].includes(first)) usage(`unknown command: ${first}`)
-
-  const flags: Flags = {
-    command: first as Command,
-    limit: 1,
-    out: defaultOut(),
-    delayMs: 2000,
-    headless: false,
-    json: false,
-  }
+  const options: Options = { headless: false, json: false }
+  let url: string | undefined
   const at = (flag: string, index: number): string => {
     const next = rest[index + 1]
     if (next === undefined || next.startsWith("--")) usage(`${flag} needs a value`)
@@ -75,107 +64,109 @@ const parse = (argv: string[]): Flags => {
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!
     if (arg === "--json") {
-      flags.json = true
+      options.json = true
     } else if (arg === "--headless") {
-      flags.headless = true
+      options.headless = true
     } else if (arg === "--team") {
-      flags.team = whole(arg, at(arg, i++))
+      options.team = whole(arg, at(arg, i++))
     } else if (arg === "--map") {
-      flags.map = at(arg, i++)
+      options.map = at(arg, i++)
     } else if (arg === "--limit") {
-      flags.limit = whole(arg, at(arg, i++), 1)
-      if (flags.limit > 100) usage("--limit must be between 1 and 100; page with --offset instead")
+      options.limit = whole(arg, at(arg, i++), 1)
+      if (options.limit > MAX_LIMIT) usage(`--limit must be between 1 and ${MAX_LIMIT}; page with --offset instead`)
     } else if (arg === "--offset") {
-      flags.offset = whole(arg, at(arg, i++))
+      options.offset = whole(arg, at(arg, i++))
     } else if (arg === "--out") {
-      flags.out = at(arg, i++)
+      options.out = at(arg, i++)
     } else if (arg === "--delay") {
-      flags.delayMs = whole(arg, at(arg, i++))
+      options.delayMs = whole(arg, at(arg, i++))
     } else if (arg.startsWith("-")) {
       usage(`unknown flag: ${arg}`)
-    } else if (flags.url === undefined) {
-      flags.url = arg
+    } else if (url === undefined) {
+      url = arg
     } else {
-      usage(`one URL at a time (got ${flags.url} and ${arg})`)
+      usage(`one URL at a time (got ${url} and ${arg})`)
     }
   }
-  if (flags.command !== "search" && flags.url === undefined) usage(`${flags.command} needs a URL`)
-  return flags
+  if (command === "search") return { ...options, command }
+  if (url === undefined) usage(`${command} needs a URL`)
+  return { ...options, command, url }
 }
 
-const printMatch = (json: boolean) => (match: {
-  matchId: number
-  date: string | null
-  teams: [string, string]
-  scores: [number, number] | null
-  event: string | null
-  url: string
-}): void => {
-  if (json) return console.log(JSON.stringify(match))
-  const score = match.scores ? match.scores.join("-") : "-"
-  console.log(
-    [String(match.matchId).padEnd(9), (match.date ?? "?").padEnd(11), match.teams.join(" vs ").padEnd(42), score.padEnd(5), match.event ?? "", match.url].join(" "),
-  )
-}
+const formatMatch = (match: Match): string =>
+  [
+    String(match.matchId).padEnd(9),
+    (match.date ?? "?").padEnd(11),
+    match.teams.join(" vs ").padEnd(42),
+    (match.scores ? match.scores.join("-") : "-").padEnd(5),
+    match.event ?? "",
+    match.url,
+  ].join(" ")
+
+/** Run one command; what it prints on stdout, one line per result (JSON with --json). */
+const run = (flags: Flags): Effect.Effect<string[], HltvError> =>
+  Effect.gen(function* () {
+    const line = (value: object, human: string) => (flags.json ? JSON.stringify(value) : human)
+    if (flags.command === "search") {
+      const matches = yield* withSource((source) =>
+        search(source, { team: flags.team, map: flags.map, limit: flags.limit, offset: flags.offset }),
+      )
+      return matches.map((match) => line(match, formatMatch(match)))
+    }
+    // A URL that is not on hltv.org fails here, before anything launches a browser.
+    yield* classifyOrFail(flags.url)
+    if (flags.command === "resolve") {
+      const ref = yield* withSource((source) => resolve(source, flags.url))
+      return [line(ref, ref.url)]
+    }
+    const archives = yield* withSource((source) =>
+      get(source, flags.url, {
+        out: flags.out,
+        limit: flags.limit,
+        delayMs: flags.delayMs,
+        onNote: (text) => {
+          if (!flags.json) console.error(text)
+        },
+      }),
+    )
+    return archives.map((archive) => line(archive, archive.path))
+  })
+
+/** Exit 2 for what the user must fix in their environment; 1 for everything else. */
+const exitCode = (error: HltvError): 1 | 2 =>
+  error._tag === "BrowserMissing" || error._tag === "ProfileBusy" ? 2 : 1
 
 const main = async (): Promise<number> => {
   const flags = parse(process.argv.slice(2))
-  if (flags.command === "help") {
+  if (flags === "help") {
     console.log(USAGE)
     return 0
   }
-  const note = (text: string) => {
-    if (!flags.json) console.error(text)
-  }
-
-  try {
-    // A URL that is not on hltv.org fails here, before anything launches a browser.
-    if (flags.command !== "search") {
-      try {
-        classifyOrFail(flags.url!).pipe(Effect.runSync)
-      } catch (error) {
-        console.error(explain(error as HltvError))
-        return 1
-      }
-    }
-
-    if (flags.command === "search") {
-      const matches = await Effect.runPromise(
-        withSource((source) => search(source, { team: flags.team, map: flags.map, limit: flags.limit, offset: flags.offset })),
-      )
-      for (const match of matches) printMatch(flags.json)(match)
-      return 0
-    }
-
-    if (flags.command === "resolve") {
-      const ref = await Effect.runPromise(withSource((source) => resolveDemo(source, flags.url!)))
-      console.log(flags.json ? JSON.stringify(ref) : ref.url)
-      return 0
-    }
-
-    const archives = await Effect.runPromise(
-      withSource((source) =>
-        get(source, flags.url!, { out: flags.out, limit: flags.limit, delayMs: flags.delayMs, onNote: note }),
-      ),
-    )
-    if (archives.length === 0) {
-      console.error("hltv-demo: nothing downloaded")
-      return 1
-    }
-    for (const archive of archives) console.log(flags.json ? JSON.stringify(archive) : archive.path)
-    return 0
-  } catch (error) {
-    if (error instanceof BrowserMissing || error instanceof ProfileBusy) {
-      console.error(explain(error))
-      return 2
-    }
-    if (error instanceof Error && "remediation" in error) {
-      console.error(explain(error as HltvError))
-      return 1
-    }
-    console.error(`hltv-demo: ${String(error)}`)
+  // Not a supported mode: headless Chrome is challenged, and the flag exists to make that legible.
+  if (flags.headless) process.env.HLTV_DEMO_HEADLESS = "1"
+  const program = run(flags).pipe(
+    Effect.flatMap((lines) =>
+      Effect.sync(() => {
+        // Only a results download comes back empty: every match lacked a demo or failed.
+        if (lines.length === 0) {
+          console.error("hltv-demo: nothing downloaded")
+          return 1
+        }
+        for (const line of lines) console.log(line)
+        return 0
+      }),
+    ),
+    Effect.catch((error) =>
+      Effect.sync(() => {
+        console.error(explain(error))
+        return exitCode(error)
+      }),
+    ),
+  )
+  return Effect.runPromise(program).catch((defect: unknown) => {
+    console.error(`hltv-demo: ${String(defect)}`)
     return 1
-  }
+  })
 }
 
 process.exit(await main())

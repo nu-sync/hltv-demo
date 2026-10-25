@@ -17,6 +17,13 @@ describe("acquire", () => {
     expect(acquire(path)).not.toBe("busy")
   })
 
+  test("a first run, whose profile folder does not exist yet, gets the lock", async () => {
+    const path = join(await mkdtemp(join(tmpdir(), "hltv-demo-lock-")), "fresh", "profile.lock")
+    const lock = acquire(path)
+    expect(lock).not.toBe("busy")
+    if (lock !== "busy") lock.release()
+  })
+
   test("a dead holder is a crash, not a lock", async () => {
     const path = join(await mkdtemp(join(tmpdir(), "hltv-demo-lock-")), "profile.lock")
     await writeFile(path, "999999999")

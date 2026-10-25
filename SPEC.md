@@ -159,7 +159,7 @@ Typed, exhaustive, each with a remediation a user can act on:
 ## Architecture
 
 ```
-src/core/      url.ts (parse, classify, pageKey) · dates.ts · manifest.ts · lock.ts · errors.ts · types.ts
+src/core/      url.ts (parse, classify, pageKey) · dates.ts · manifest.ts · lock.ts · errors.ts · types.ts (Schemas)
 src/browser.ts Chrome session: launch, challenge detection, navigate-and-arrive, download
 src/source.ts  the Source boundary over a session, and withSource (one browser per unit of work)
 src/hltv/      extract.ts (in-page DOM readers) · search.ts · resolve.ts · get.ts
@@ -176,8 +176,8 @@ Boundaries:
 - **Pure** (`core/`) is where the rules live and where the unit tests point: URL handling, page
   identity, manifest bookkeeping. No I/O, no browser.
 - **Browser** (`browser.ts`) is the only module that knows Playwright. It owns the profile, converts
-  playwright errors into domain errors, and exposes three verbs: `gotoArrived`, `downloadTo`,
-  `read`.
+  playwright errors into domain errors, and exposes `Session.open`, `read`, and `downloadTo`. Every
+  page it opens is closed however the operation ends.
 - **HLTV shape** (`hltv/extract.ts`) is a set of functions executed *inside the page* (and inside a
   fixture page in tests), so the same selector code runs live and offline.
 
@@ -185,7 +185,7 @@ Effect is used where it earns its place: `Effect.gen` for orchestration, `Data.T
 the error table, `Effect.scoped`/`Effect.acquireRelease` so the browser and the profile lock are always
 released, and `Tool`/`Toolkit`/`McpServer` for the MCP transport. A thrown error would become a defect
 (an "internal error" to an MCP client), so `classifyOrFail` turns URL failures into typed ones at both
-entry points. There is no automatic retry: a `Challenge` must not be retried, and retrying a
+entry points, and `manifest.attempt` does the same for the manifest helpers. There is no automatic retry: a `Challenge` must not be retried, and retrying a
 download is a user decision, not a policy the tool should hide.
 
 Playwright supplies what the browser does not: `download.saveAs(path)` picks the output path, so
@@ -240,7 +240,8 @@ profile. Respect removal requests from the site.
 | `download <match>` | 480 MB in 7.4 s wall, 2 `.dem` (Mirage, Cache) |
 | repeat `download <match>` | `skip`, 0.8 s |
 | `download 'results?team=9565&map=de_inferno' --limit 2` | 746 MB + 444 MB in 23 s, the two Vitality matches the filter names |
-| `bun test` | 58 pass (units, fixtures, tool handlers, MCP protocol, CLI) |
+| `bun test` | 63 pass (units, fixtures, tool handlers, MCP protocol, CLI) |
+| first run: `search --limit 1` with a fresh profile whose folder does not exist | 1 match in 2.5 s; it used to fail as `BrowserMissing` ("no Chrome found") |
 | `bun run scripts/capture-fixtures.ts --trim` | 205 KB → 54 KB and 541 KB → 3 KB, 5/5 fixture tests still pass |
 | `scripts/live-check.sh` | 25/25 in 31 s, target discovered on `/results` (G2 vs NAVI), 703 MB, 2 `.dem`, MCP reusing the CLI's archive |
 | downstream sanity | `nades ingest` read the archive's map and event from HLTV's file name |

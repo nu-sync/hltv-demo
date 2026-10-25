@@ -4,6 +4,9 @@
  */
 import { Effect } from "effect"
 import { describe, expect, test } from "bun:test"
+import { writeFile } from "node:fs/promises"
+import { join } from "node:path"
+import { DownloadFailed } from "../../src/core/errors.ts"
 import { get } from "../../src/hltv/get.ts"
 import { resolve } from "../../src/hltv/resolve.ts"
 import { search } from "../../src/hltv/search.ts"
@@ -102,6 +105,37 @@ describe("get", () => {
     expect(calls.results).toEqual(["https://www.hltv.org/results?team=9565&map=de_inferno"])
     expect(calls.download).toHaveLength(1)
     expect(archives).toHaveLength(1)
+  })
+
+  test("a results URL continues past a download that fails, and says so", async () => {
+    const out = await tempDir()
+    const { source, calls } = fakeSource({ rows: [row(1), row(2)] })
+    const notes: string[] = []
+    const flaky = {
+      ...source,
+      match: (url: string) =>
+        Effect.succeed({ title: "t", demoHref: `/download/demo/${url.match(/\d+/)?.[0]}`, date: null, event: null }),
+      download: (demoUrl: string, dir: string) =>
+        demoUrl.endsWith("/1")
+          ? Effect.fail(new DownloadFailed({ url: demoUrl, reason: "stalled" }))
+          : source.download(demoUrl, dir),
+    }
+
+    const archives = await run(get(flaky, "/results", { out, limit: 2, delayMs: 0, onNote: (note) => notes.push(note) }))
+    expect(archives.map((archive) => archive.demoUrl)).toEqual(["https://www.hltv.org/download/demo/2"])
+    expect(calls.download).toEqual(["https://www.hltv.org/download/demo/2"])
+    expect(notes).toContain(
+      "error https://www.hltv.org/download/demo/1: https://www.hltv.org/download/demo/1 did not download: stalled",
+    )
+  })
+
+  test("a corrupt manifest is a typed ManifestUnreadable, not a defect", async () => {
+    const out = await tempDir()
+    await writeFile(join(out, ".hltv-demo.tsv"), "no-tab-here\n")
+    const { source, calls } = fakeSource()
+    const error = await run(Effect.flip(get(source, "/download/demo/1", { out, limit: 1, delayMs: 0 })))
+    expect(error._tag).toBe("ManifestUnreadable")
+    expect(calls.download).toEqual([])
   })
 
   test("a foreign host is refused before anything opens", async () => {

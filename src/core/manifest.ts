@@ -1,6 +1,8 @@
+import { Effect } from "effect"
 import { appendFile, mkdir, readFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { ManifestUnreadable } from "./errors.ts"
+import type { ManifestEntrySchema } from "./types.ts"
 
 /**
  * `<out>/.hltv-demo.tsv` maps a demo URL to the file it produced, so a repeat fetch does not pull
@@ -9,9 +11,13 @@ import { ManifestUnreadable } from "./errors.ts"
  */
 export const MANIFEST = ".hltv-demo.tsv"
 
-export type Entry = { demoUrl: string; fileName: string }
+export type Entry = typeof ManifestEntrySchema.Type
 
 export const manifestPath = (out: string): string => join(out, MANIFEST)
+
+/** Any failure touching `<out>`'s manifest, as the one error this module rejects with. */
+const unreadable = (out: string, cause: unknown): ManifestUnreadable =>
+  cause instanceof ManifestUnreadable ? cause : new ManifestUnreadable({ path: manifestPath(out), reason: String(cause) })
 
 export const parse = (text: string): Entry[] =>
   text
@@ -31,12 +37,12 @@ export const read = async (out: string): Promise<Entry[]> => {
     text = await readFile(manifestPath(out), "utf8")
   } catch (cause) {
     if ((cause as NodeJS.ErrnoException).code === "ENOENT") return []
-    throw new ManifestUnreadable({ path: manifestPath(out), reason: String(cause) })
+    throw unreadable(out, cause)
   }
   try {
     return parse(text)
   } catch (cause) {
-    throw new ManifestUnreadable({ path: manifestPath(out), reason: String(cause) })
+    throw unreadable(out, cause)
   }
 }
 
@@ -48,7 +54,7 @@ export const record = async (out: string, entry: Entry): Promise<void> => {
   try {
     await appendFile(manifestPath(out), format(entry), "utf8")
   } catch (cause) {
-    throw new ManifestUnreadable({ path: manifestPath(out), reason: String(cause) })
+    throw unreadable(out, cause)
   }
 }
 
@@ -59,3 +65,10 @@ export const lookup = async (out: string, demoUrl: string): Promise<string | nul
   const path = join(out, hit.fileName)
   return (await Bun.file(path).exists()) ? path : null
 }
+
+/**
+ * Run manifest work inside an Effect. The helpers above reject with ManifestUnreadable; this keeps it a
+ * typed failure, where a rejected `Effect.promise` would be a defect (an "internal error" to MCP clients).
+ */
+export const attempt = <A>(out: string, work: () => Promise<A>): Effect.Effect<A, ManifestUnreadable> =>
+  Effect.tryPromise({ try: work, catch: (cause) => unreadable(out, cause) })

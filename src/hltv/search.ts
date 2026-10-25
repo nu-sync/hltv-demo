@@ -1,11 +1,13 @@
 import { Effect } from "effect"
-import type { SearchFilter, Match } from "../core/types.ts"
-import type { HltvError } from "../core/errors.ts"
-import { NoMatchesFound } from "../core/errors.ts"
-import { absolute, resultsUrl } from "../core/url.ts"
 import { fromHeading } from "../core/dates.ts"
+import { NoMatchesFound, type HltvError } from "../core/errors.ts"
+import type { Match, SearchFilter } from "../core/types.ts"
+import { absolute, resultsUrl } from "../core/url.ts"
 import type { SourceShape } from "../source.ts"
-import { readMatches, type RawMatch } from "./extract.ts"
+import type { RawMatch } from "./extract.ts"
+
+/** The most matches one search returns: one hltv.org results page. Page with `offset` for more. */
+export const MAX_LIMIT = 100
 
 /** One results row as a Match, keeping every field HLTV may omit optional. */
 export const toMatch = (raw: RawMatch): Match => ({
@@ -34,12 +36,12 @@ export const dedupe = (matches: Match[]): Match[] => {
   return [...byId.values()]
 }
 
-/** The newest matches on a results page, capped by the filter's limit. */
+/** The newest matches on a results page: `limit` of them, default 1 and at most MAX_LIMIT. */
 export const search = (source: SourceShape, filter: SearchFilter): Effect.Effect<Match[], HltvError> =>
   Effect.gen(function* () {
-    const url = resultsUrl({ team: filter.team, map: filter.map, offset: filter.offset })
+    const url = resultsUrl(filter)
     const raw = yield* source.results(url)
     const matches = dedupe(raw.map(toMatch).filter((match) => Number.isFinite(match.matchId)))
-    if (matches.length === 0) return yield* Effect.fail(new NoMatchesFound({ url }))
-    return matches.slice(0, Math.max(1, filter.limit))
+    if (matches.length === 0) return yield* new NoMatchesFound({ url })
+    return matches.slice(0, Math.min(Math.max(filter.limit ?? 1, 1), MAX_LIMIT))
   })

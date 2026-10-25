@@ -145,7 +145,7 @@ union: `NotHltvUrl`, `UnsupportedPage`, `Challenge`, `NoDemoFound`, `NoMatchesFo
 ## Development
 
 ```bash
-bun test                 # 58 tests
+bun test                 # 63 tests
 bun run typecheck        # tsc --noEmit
 scripts/live-check.sh    # 25 checks against the newest /results match, both entry points
 ```

@@ -128,6 +128,6 @@ export class ManifestUnreadable extends Data.TaggedError("ManifestUnreadable")<{
   }
 }
 
-/** One line per failure, for humans. */
+/** The message, then its remediation indented beneath it, for humans. */
 export const explain = (error: HltvError): string =>
   [error.message, "  " + error.remediation.replaceAll("\n", "\n  ")].join("\n")

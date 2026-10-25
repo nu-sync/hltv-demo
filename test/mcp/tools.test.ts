@@ -4,6 +4,7 @@
  */
 import { Effect } from "effect"
 import { describe, expect, test } from "bun:test"
+import { writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { makeHandlers } from "../../src/mcp.ts"
 import { fakeSource, row, tempDir } from "../helpers/fake-source.ts"
@@ -81,6 +82,14 @@ describe("list_downloads", () => {
     expect(listing.entries).toHaveLength(1)
     expect(listing.entries[0]!.demoUrl).toBe("https://www.hltv.org/download/demo/9")
     expect(listing.entries[0]!.fileName).toContain("9-event-a-vs-b-bo3-x.rar")
+  })
+
+  test("a corrupt manifest is a failure the client can act on, not an internal error", async () => {
+    const out = await tempDir()
+    await writeFile(join(out, ".hltv-demo.tsv"), "no-tab-here\n")
+    const failure = await failed(makeHandlers(fakeSource().withSource).list_downloads({ out }))
+    expect(failure.message).toContain("cannot read the download manifest")
+    expect(failure.remediation).toContain("delete the manifest")
   })
 
   test("a folder with no manifest lists nothing", async () => {
