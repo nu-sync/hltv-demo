@@ -326,8 +326,10 @@ v0.2 (Rust), 2026-10-25:
 | `download /download/demo/113159` | 480 MB under HLTV's name, 2 `.dem`; repeat `skip` in 0.37 s |
 | the same archive, Rust then TypeScript, back to back | 23.9 s and 38.5 s, byte-identical archives |
 | `cargo xtask live-check` | 25/25 in 48 s, target discovered on `/results` (G2 vs NAVI), 703 MB, 2 `.dem`, MCP reusing the CLI's archive |
+| `cargo xtask live-check`, after the move to the repository root | 25/25 in 126 s; the 703 MB download took 107 s on a link a speed test put at 7.5 MB/s |
 | SIGINT during a real download | exit 130 at 7 MB; no `.crdownload` left, lock released, no Chrome on the profile |
-| `cargo test --workspace` | 97 pass: unit, operations, fixtures, MCP in-process and over stdio, CLI, signals, doctest, xtask |
+| `cargo test --workspace` | 98 pass on Rust 1.88 (`rust-version`) and on 1.95: unit, operations, fixtures, MCP in-process and over stdio, CLI, signals, doctest, xtask |
+| `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps` | clean |
 | `cargo xtask capture-fixtures --trim` | both fixtures byte-identical to the TypeScript capture |
 | `cargo install --path .` | installs `hltv-demo` and `hltv-demo-mcp` |
 

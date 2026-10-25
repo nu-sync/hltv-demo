@@ -7,18 +7,21 @@
 //! ```no_run
 //! use hltv_demo::{Chrome, Options, get, with_source};
 //!
-//! # async fn example() -> Result<(), hltv_demo::HltvError> {
-//! let url = "https://www.hltv.org/matches/2399723/vitality-vs-9z-pgl-masters-bucharest-2026";
-//! let on_note = |note: &str| eprintln!("{note}");
-//! let options = Options { out: Some("./demos".into()), on_note: Some(&on_note), ..Default::default() };
-//! // One headed Chrome for the duration of the work, closed after, with the profile lock held.
-//! let archives = with_source(&Chrome, async |source| get(source, url, &options).await).await?;
-//! for archive in archives {
-//!     println!("{} ({} bytes) from {}", archive.path, archive.bytes, archive.demo_url);
+//! #[tokio::main]
+//! async fn main() -> Result<(), hltv_demo::HltvError> {
+//!     let url = "https://www.hltv.org/matches/2399723/vitality-vs-9z-pgl-masters-bucharest-2026";
+//!     let on_note = |note: &str| eprintln!("{note}");
+//!     let options = Options { out: Some("./demos".into()), on_note: Some(&on_note), ..Default::default() };
+//!     // One headed Chrome for the duration of the work, holding the profile lock, closed after.
+//!     let archives = with_source(&Chrome, async |source| get(source, url, &options).await).await?;
+//!     for archive in archives {
+//!         println!("{} ({} bytes) from {}", archive.path, archive.bytes, archive.demo_url);
+//!     }
+//!     Ok(())
 //! }
-//! # Ok(())
-//! # }
 //! ```
+//!
+//! The same example is in the README; this copy is compiled by `cargo test`, so the two stay true.
 
 pub mod browser;
 pub mod cli;

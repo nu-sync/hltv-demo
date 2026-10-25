@@ -1,6 +1,7 @@
 # hltv-demo
 
-Find and download professional CS2 demo archives from hltv.org through a real Chrome.
+Find and download professional CS2 demo archives from hltv.org through a real Chrome — as a command
+line tool, an MCP server, or a Rust library.
 
 ```bash
 hltv-demo search   --team 9565 --map de_cache --limit 3   # what exists
@@ -8,20 +9,19 @@ hltv-demo resolve  <match-url>                            # does it have a demo
 hltv-demo download <url> --out ./demos                    # get it
 ```
 
-A CLI, a [library](#library), and an [MCP server](#mcp-server) over the same operations. Archives
-keep HLTV's own file names (`<event>-<team>-vs-<team>-bo<n>-<id>.rar`), so whatever reads them
-downstream needs to know nothing about this tool.
+Archives keep HLTV's own file names (`<event>-<team>-vs-<team>-bo<n>-<id>.rar`), so whatever reads
+them downstream needs to know nothing about this tool, and a manifest beside them records which demo
+URL produced which file.
 
 ## Install
 
 ```bash
-cargo install --path .             # hltv-demo and hltv-demo-mcp into ~/.cargo/bin
-hltv-demo --help
+git clone git@github.com:nu-sync/hltv-demo.git && cd hltv-demo
+cargo install --path .             # hltv-demo and hltv-demo-mcp, into ~/.cargo/bin
 ```
 
-Requires Rust 1.88+ and Google Chrome; `CHROME=/path/to/chrome` selects
-another binary (needed on Linux). Nothing is downloaded for you — the tool drives the Chrome you
-already have.
+Requires Rust 1.88 or newer and Google Chrome. Nothing is downloaded for you: the tool drives the
+Chrome you already have, at the macOS install path unless `CHROME=/path/to/chrome` says otherwise.
 
 ## Chrome, and the Cloudflare challenge
 
@@ -41,7 +41,7 @@ Answer it once in that window, close the window, and run the command again; late
 cookie. While that window is open the profile is in use, and the tool says so. There is no bypass in
 this tool, and none is accepted.
 
-## CLI
+## Command line
 
 ```
 hltv-demo search   [--team ID] [--map NAME] [--limit N] [--offset N] [--json]
@@ -49,19 +49,15 @@ hltv-demo resolve  <match-url> [--json]
 hltv-demo download <url> [--out DIR] [--limit N] [--delay MS] [--json]
 ```
 
-Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequisite (no Chrome, a
-profile in use, no network), `128 + n` when a signal stopped the run (130 for Ctrl-C) — Chrome is
-closed and the profile released first. `--json` prints one JSON object per line on stdout; without
-it, human progress goes to stderr.
-
 | Flag | Meaning |
 |---|---|
-| `--team ID` | HLTV team id, as in `hltv.org/team/9565/...` |
+| `--team ID` | HLTV team id, as in `hltv.org/team/9565/vitality` |
 | `--map NAME` | `cache` or `de_cache`; the `de_` prefix is added once |
 | `--limit N` | `search`: max matches; `download`: matches a results URL contributes (default 1, at most 100) |
 | `--offset N` | results to skip, for paging (HLTV lists 100 per page) |
 | `--out DIR` | download destination (default `~/.cache/hltv-demo/archives`) |
 | `--delay MS` | pause between matches in a results run (default 2000) |
+| `--json` | one JSON object per line on stdout, and nothing else there |
 
 ```bash
 hltv-demo search --team 9565 --map de_cache --limit 3
@@ -70,17 +66,27 @@ hltv-demo download 'https://www.hltv.org/results?team=9565&map=de_inferno' --lim
 hltv-demo download /download/demo/113159 --out ./demos
 ```
 
-Any match, results, or `/download/demo/<id>` URL works. `search` reads `/results` only, newest
-first, and drops the duplicate a results page lists in its "featured" block, keeping the copy that
-has a date. `resolve` prints the demo URL, or exits `1` with `has no demo download link`. One
-archive holds every map of the series (bo3 → 2 `.dem`); they are 440–890 MB.
+Any match, results, or `/download/demo/<id>` URL works, and bare paths are fine. `search` reads
+`/results` only, newest first, and drops the duplicate a results page lists in its "featured" block,
+keeping the copy that has a date. `resolve` prints the demo URL, or exits `1` with
+`has no demo download link`. One archive holds every map of the series (bo3 → 2 `.dem`); they are
+440–890 MB.
 
-Environment: `CHROME`, `HLTV_DEMO_PROFILE` (default `~/.cache/hltv-demo/chrome`), `HLTV_DEMO_OUT`,
-and `RUST_LOG=hltv_demo=debug` for launch, arrival, and download timings on stderr.
+Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequisite (no Chrome, a
+profile in use, no network), `128 + n` when a signal stopped the run (130 for Ctrl-C) — Chrome is
+closed and the profile released first.
+
+| Environment | Meaning |
+|---|---|
+| `CHROME` | the Chrome binary (default: the macOS install) |
+| `HLTV_DEMO_PROFILE` | the persistent profile (default `~/.cache/hltv-demo/chrome`) |
+| `HLTV_DEMO_OUT` | the default `--out` |
+| `RUST_LOG=hltv_demo=debug` | launch, arrival, and download timings on stderr |
 
 ## MCP server
 
-The same operations, as MCP tools over stdio:
+`hltv-demo-mcp` serves the same operations as MCP tools over stdio. Register it with the absolute
+path, since desktop apps rarely have `~/.cargo/bin` on their `PATH`:
 
 ```json
 {
@@ -99,14 +105,41 @@ The same operations, as MCP tools over stdio:
 | `download_demo` | `url`, `out?`, `limit?`, `delayMs?` | `[{ path, bytes, demoUrl, suggestedName }]` |
 | `list_downloads` | `out?` | `{ manifest, entries }` |
 
-Failures return `{ message, remediation }`, and the Cloudflare one names the Chrome profile to open.
-A bad URL or map name fails before a browser opens; browser-backed tools launch Chrome for that call
-and close it after, so an idle server holds no window. The CLI and the server share `.hltv-demo.tsv`,
-so an archive fetched by one is skipped by the other.
+Every tool publishes input and output schemas. Failures are tool errors carrying
+`{ message, remediation }`, and the Cloudflare one names the Chrome profile to open. A bad URL or map
+name fails before a browser opens; the other tools launch Chrome for that call and close it after, so
+an idle server holds no window. The CLI and the server share `.hltv-demo.tsv`, so an archive fetched
+by one is skipped by the other.
 
-```bash
-cargo xtask mcp-call search_matches '{"team":9565,"map":"de_cache","limit":2}'
+## Library
+
+```toml
+[dependencies]
+hltv-demo = { git = "https://github.com/nu-sync/hltv-demo" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
+
+```rust
+use hltv_demo::{Chrome, Options, get, with_source};
+
+#[tokio::main]
+async fn main() -> Result<(), hltv_demo::HltvError> {
+    let url = "https://www.hltv.org/matches/2399723/vitality-vs-9z-pgl-masters-bucharest-2026";
+    let on_note = |note: &str| eprintln!("{note}");
+    let options = Options { out: Some("./demos".into()), on_note: Some(&on_note), ..Default::default() };
+    // One headed Chrome for the duration of the work, holding the profile lock, closed after.
+    let archives = with_source(&Chrome, async |source| get(source, url, &options).await).await?;
+    for archive in archives {
+        println!("{} ({} bytes) from {}", archive.path, archive.bytes, archive.demo_url);
+    }
+    Ok(())
+}
+```
+
+`get`, `search`, and `resolve` take a `Source`, never a browser: that is why the CLI and the MCP
+server share them, and why they are tested without Chrome. `with_source` asks an `Opener` for one
+source, runs the work, and closes it however the work ends; `Chrome` is the real one. Everything
+fails with `HltvError`, and every variant has a `remediation()`. `cargo doc --open` has the rest.
 
 ## Behaviour worth knowing
 
@@ -121,54 +154,29 @@ One run at a time: the profile is locked by pid, so two concurrent runs fail wit
 `the Chrome profile … is in use` instead of sharing a browser. `HLTV_DEMO_PROFILE=/another/path`
 isolates them.
 
-## Library
-
-```rust
-use hltv_demo::{Chrome, Options, get, with_source};
-
-let url = "https://www.hltv.org/matches/2399723/vitality-vs-9z-pgl-masters-bucharest-2026";
-let on_note = |note: &str| eprintln!("{note}");
-let options = Options { out: Some("./demos".into()), on_note: Some(&on_note), ..Default::default() };
-let archives = with_source(&Chrome, async |source| get(source, url, &options).await).await?;
-// archives: Vec<Archive { path, bytes, demo_url, suggested_name }>
-```
-
-`get`, `search`, and `resolve` take a `Source`, never a browser — which is why both entry points
-share them and why they are testable without Chrome. `with_source` asks an `Opener` (`Chrome` opens a
-headed Chrome on the shared profile, holding its lock) for one source, runs the work, and closes it
-however the work ends. Everything fails with `HltvError`: `NotHltvUrl`, `UnsupportedPage`,
-`NotAMap`, `Challenge`, `NoDemoFound`, `NoMatchesFound`, `DownloadFailed`, `BrowserMissing`,
-`BrowserFailed`, `ProfileBusy`, `Unreachable`, `ManifestUnreadable` — each with `remediation()`.
-
 ## Development
 
 ```bash
-cargo test --workspace                   # 98 tests
-cargo clippy --workspace --all-targets
+cargo test --workspace                   # 98 tests; the fixture tests need Chrome
+cargo clippy --workspace --all-targets   # no warnings
 cargo xtask live-check                   # 25 checks against the newest /results match, both entry points
+cargo xtask capture-fixtures [--trim]    # refresh tests/fixtures/*.html from hltv.org (or re-trim offline)
+cargo xtask mcp-call search_matches '{"team":9565,"map":"de_cache","limit":2}'
 ```
 
-| Suite | What it proves | Needs |
-|---|---|---|
-| unit tests in `src/` | URL rules, dates, manifest, lock, arrival and download timing | nothing |
-| `tests/operations.rs` | the operations against a fake Source | nothing |
-| `tests/mcp.rs`, `tests/protocol.rs` | tool handlers, and the server over stdio via rmcp's client | nothing |
-| `tests/cli.rs`, `tests/signals.rs` | exit codes, messages, Chrome's argv, clean stops on signals | nothing |
-| `tests/fixtures.rs` | the readers still match hltv.org markup | Chrome |
-| `cargo xtask live-check` | both entry points against a live match, sharing one manifest | network + Chrome |
+| Path | What lives there |
+|---|---|
+| `src/core/` | the rules: URLs, page identity, dates, manifest, profile lock, errors, types |
+| `src/hltv/` | `search`, `resolve`, `get`, and the readers that run inside the page |
+| `src/browser.rs` | the only code that drives Chrome (CDP, via chromiumoxide) |
+| `src/cli.rs`, `src/mcp.rs` | the two transports; `src/main.rs` and `src/bin/` are their binaries |
+| `tests/` | operations against a fake browser, MCP over stdio, the CLI, signals, saved HLTV pages |
+| `xtask/` | development tasks; never shipped |
 
-Fixtures are real HTML **trimmed to the subtrees the readers use** (57 KB, down from 746 KB), with
-no scripts, comments, ads, or tracking. Trimming happens during capture, so a page dump cannot land
-in the repo:
-
-```bash
-cargo xtask capture-fixtures          # re-capture (headed Chrome, network)
-cargo xtask capture-fixtures --trim   # re-trim only (headless, no network)
-```
-
-When HLTV changes its markup, a fixture test fails instead of a download. Design notes, the
-invariants, the error table, and the decisions are in [SPEC.md](SPEC.md); layout and working rules
-are in [AGENTS.md](AGENTS.md).
+When HLTV changes its markup, a fixture test fails instead of a download. The verified facts, the
+invariants, the error table, and the reasoning behind each decision are in [SPEC.md](SPEC.md);
+working rules for contributors and agents are in [AGENTS.md](AGENTS.md); releases are in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Scope and limits
 
