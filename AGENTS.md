@@ -68,7 +68,7 @@ MCP ─┘        src/hltv/*         src/source.rs  src/browser.rs
 
 | Path | Role |
 |---|---|
-| `SPEC.md` | verified facts, invariants, error table, architecture, decisions, open questions |
+| `SPEC.md`, `CHANGELOG.md` | verified facts, invariants, error table, architecture, decisions, open questions |
 | `src/core/` | rules and small helpers, no browser and no network: `url`, `dates`, `manifest`, `lock`, `errors`, `types` |
 | `src/browser.rs` | the only chromiumoxide module: launch, `Session`, `Offline`, page reads, download |
 | `src/browser/arrival.rs` | what one probe of a page means (wait, read, fail), with no browser |
@@ -78,29 +78,28 @@ MCP ─┘        src/hltv/*         src/source.rs  src/browser.rs
 | `src/cli.rs` | arguments, formatting, exit codes |
 | `src/mcp.rs` | the rmcp tool router and the stdio server |
 | `src/process.rs` | stderr logging and shutdown signals, for the binaries only |
-| `src/bin/` | the two binaries, each a few lines |
+| `src/main.rs`, `src/bin/hltv-demo-mcp.rs` | the two binaries, each a few lines |
 | `src/lib.rs` | public library surface |
 | `tests/` | see Testing; `tests/fixtures/*.html` are the saved hltv.org pages |
 | `xtask/` | `cargo xtask live-check`, `capture-fixtures [--trim]`, `mcp-call` (never ships) |
-| `scripts/live-check.sh` | thin shell entry point for the live end-to-end run |
 
 ## Commands
 
 ```bash
 cargo build                                   # no browser download: chromiumoxide drives the installed Chrome
-cargo test --workspace                        # 97 tests
+cargo test --workspace                        # 98 tests
 cargo clippy --workspace --all-targets        # no warnings
 cargo fmt --all
-cargo run --bin hltv-demo -- --help
-cargo run --bin hltv-demo -- search --team 9565 --map de_cache --limit 3 --json
-cargo run --bin hltv-demo -- download 'https://www.hltv.org/results?team=9565&map=de_inferno' --limit 2
+cargo run -- --help                           # hltv-demo is the default binary
+cargo run -- search --team 9565 --map de_cache --limit 3 --json
+cargo run -- download 'https://www.hltv.org/results?team=9565&map=de_inferno' --limit 2
 cargo run --bin hltv-demo-mcp                 # MCP over stdio
 cargo install --path .                        # hltv-demo and hltv-demo-mcp into ~/.cargo/bin
 cargo xtask mcp-call search_matches '{"team":9565,"map":"de_cache","limit":2}'
 cargo xtask capture-fixtures                  # re-capture + trim the fixtures (headed Chrome)
 cargo xtask capture-fixtures --trim           # re-trim only (headless, no network)
-scripts/live-check.sh                         # 25 live checks, needs network + Chrome (~50 s)
-RUST_LOG=hltv_demo=debug cargo run --bin hltv-demo -- ...   # launch, arrival, download timings
+cargo xtask live-check                        # 25 live checks, needs network + Chrome (~50 s)
+RUST_LOG=hltv_demo=debug cargo run -- ...     # launch, arrival, download timings
 ```
 
 Exit codes: `0` success, `1` domain failure, `2` usage error or missing prerequisite, `128 + n` when
@@ -153,7 +152,7 @@ signal `n` stopped the run.
 | `tests/cli.rs` | the real binary: exit codes, messages, Chrome's argv, held profiles | nothing |
 | `tests/signals.rs` | a signal kills Chrome, releases the lock, exits 128 + n, in both binaries | nothing |
 | `tests/fixtures.rs` | the production readers still match saved hltv.org HTML; no network is `Unreachable` | Chrome |
-| `scripts/live-check.sh` | both transports against the newest match on `/results`, sharing one manifest | network + Chrome |
+| `cargo xtask live-check` | both transports against the newest match on `/results`, sharing one manifest | network + Chrome |
 
 When HLTV's markup changes, a fixture test fails, not a download. Refresh with
 `cargo xtask capture-fixtures` and review the diff: it writes *trimmed* pages (subtrees the readers
@@ -163,13 +162,13 @@ or is still a challenge page, so a bad capture cannot replace a good fixture.
 ## Before claiming a change works
 
 ```bash
-cargo test --workspace                   # 97 tests
+cargo test --workspace                   # 98 tests
 cargo clippy --workspace --all-targets   # no warnings
-scripts/live-check.sh                    # 25 checks; exit 2 means a prerequisite is missing (a coverage gap, not a pass)
+cargo xtask live-check                   # 25 checks; exit 2 means a prerequisite is missing (a coverage gap, not a pass)
 ```
 
 If a change touches the browser layer, the readers, the manifest, or either transport,
-`live-check.sh` is required — the offline suites cannot see Cloudflare, markup drift, or a download
+the live check is required — the offline suites cannot see Cloudflare, markup drift, or a download
 that never starts. Record what was measured in `SPEC.md` when a number or a fact changes.
 
 ## Notes and known gaps
@@ -182,6 +181,6 @@ that never starts. Record what was measured in `SPEC.md` when a number or a fact
   wire protocol).
 - Demos are 440–890 MB and archives are kept forever. There is no prune command; deleting a file makes
   it fetchable again.
-- Environment: Rust 1.95 (what this is built and tested with; rmcp needs 1.88+), Google Chrome, and
-  `bsdtar` for the live check. `chromiumoxide` 0.9 (CDP, no bundled browser), `rmcp` 3.7, `clap` 4.6,
+- Environment: Rust 1.88+ (`rust-version`; the workspace is tested on 1.88 and 1.95), Google
+  Chrome, and `bsdtar` for the live check. `chromiumoxide` 0.9 (CDP, no bundled browser), `rmcp` 3.7, `clap` 4.6,
   `tokio` 1.54.

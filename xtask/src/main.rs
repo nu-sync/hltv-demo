@@ -5,6 +5,7 @@ mod capture;
 mod live_check;
 mod mcp_call;
 mod paths;
+mod text;
 
 use std::process::ExitCode;
 

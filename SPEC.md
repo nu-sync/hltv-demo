@@ -195,6 +195,7 @@ src/hltv/              extract.rs + extract.js (in-page readers) · search.rs ·
 src/cli.rs             clap arguments, human output, JSON lines, exit codes
 src/mcp.rs             rmcp tool router: the same operations as four MCP tools over stdio
 src/process.rs         stderr logging and shutdown signals, for the two binaries only
+src/main.rs            the hltv-demo binary · src/bin/hltv-demo-mcp.rs the MCP server binary
 xtask/                 cargo xtask live-check | capture-fixtures [--trim] | mcp-call (never ships)
 ```
 
@@ -258,7 +259,7 @@ How the browser layer works:
 6. **Signals (`tests/signals.rs`)** — a stand-in Chrome that never answers holds a run at launch with
    the lock taken; SIGINT and SIGTERM must kill it, release the lock, and exit 128 + n, for the CLI
    and for an MCP tool call.
-7. **Live check (`scripts/live-check.sh` → `cargo xtask live-check`)** — the only end-to-end run, and
+7. **Live check (`cargo xtask live-check`)** — the only end-to-end run, and
    it discovers its target instead of naming one: read the newest `/results` page, walk the
    candidates until a match publishes a demo, then assert that match through the CLI (`search`,
    `resolve`, `download`, repeat-skip) and through the MCP server (all four tools, over stdio, through
@@ -324,7 +325,7 @@ v0.2 (Rust), 2026-10-25:
 | `resolve <match>` | `/download/demo/113159` in 0.9 s |
 | `download /download/demo/113159` | 480 MB under HLTV's name, 2 `.dem`; repeat `skip` in 0.37 s |
 | the same archive, Rust then TypeScript, back to back | 23.9 s and 38.5 s, byte-identical archives |
-| `scripts/live-check.sh` | 25/25 in 48 s, target discovered on `/results` (G2 vs NAVI), 703 MB, 2 `.dem`, MCP reusing the CLI's archive |
+| `cargo xtask live-check` | 25/25 in 48 s, target discovered on `/results` (G2 vs NAVI), 703 MB, 2 `.dem`, MCP reusing the CLI's archive |
 | SIGINT during a real download | exit 130 at 7 MB; no `.crdownload` left, lock released, no Chrome on the profile |
 | `cargo test --workspace` | 97 pass: unit, operations, fixtures, MCP in-process and over stdio, CLI, signals, doctest, xtask |
 | `cargo xtask capture-fixtures --trim` | both fixtures byte-identical to the TypeScript capture |

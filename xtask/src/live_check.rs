@@ -35,7 +35,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 use tokio::io::AsyncReadExt;
 
-use crate::paths;
+use crate::{paths, text};
 
 const MIN_ARCHIVE_BYTES: u64 = 100_000_000;
 
@@ -149,7 +149,7 @@ impl Run {
 
     fn tail(&self) -> String {
         let at = self.stderr.len().saturating_sub(1500);
-        self.stderr[self.stderr.ceil_char_boundary(at)..].to_string()
+        self.stderr[text::ceil(&self.stderr, at)..].to_string()
     }
 
     /// Exit 0, or the reason not: an exit 2 or a challenge is the environment, anything else the code.

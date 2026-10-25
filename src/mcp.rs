@@ -63,7 +63,7 @@ pub struct SearchParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolveParams {
-    /// an hltv.org/matches/<id>/... URL
+    /// a match URL, e.g. `https://www.hltv.org/matches/2399723/vitality-vs-9z`
     pub match_url: String,
 }
 

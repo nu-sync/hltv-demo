@@ -14,7 +14,7 @@ use hltv_demo::hltv::extract;
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::paths;
+use crate::{paths, text};
 
 struct Fixture {
     name: &'static str,
@@ -78,8 +78,8 @@ fn checked(fixture: &Fixture, trimmed: Trimmed) -> Result<Trimmed, String> {
         .replace_all(&trimmed.html, "")
         .into_owned();
     if let Some(leak) = Regex::new(FORBIDDEN).unwrap().find(&html) {
-        let from = html.floor_char_boundary(leak.start().saturating_sub(120));
-        let to = html.ceil_char_boundary((leak.end() + 160).min(html.len()));
+        let from = text::floor(&html, leak.start().saturating_sub(120));
+        let to = text::ceil(&html, leak.end() + 160);
         return Err(format!(
             "{}: trim left {} behind: …{}…",
             fixture.name,

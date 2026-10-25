@@ -19,7 +19,7 @@ cargo install --path .             # hltv-demo and hltv-demo-mcp into ~/.cargo/b
 hltv-demo --help
 ```
 
-Requires Rust (built and tested with 1.95) and Google Chrome; `CHROME=/path/to/chrome` selects
+Requires Rust 1.88+ and Google Chrome; `CHROME=/path/to/chrome` selects
 another binary (needed on Linux). Nothing is downloaded for you — the tool drives the Chrome you
 already have.
 
@@ -143,9 +143,9 @@ however the work ends. Everything fails with `HltvError`: `NotHltvUrl`, `Unsuppo
 ## Development
 
 ```bash
-cargo test --workspace                   # 97 tests
+cargo test --workspace                   # 98 tests
 cargo clippy --workspace --all-targets
-scripts/live-check.sh                    # 25 checks against the newest /results match, both entry points
+cargo xtask live-check                   # 25 checks against the newest /results match, both entry points
 ```
 
 | Suite | What it proves | Needs |
@@ -155,7 +155,7 @@ scripts/live-check.sh                    # 25 checks against the newest /results
 | `tests/mcp.rs`, `tests/protocol.rs` | tool handlers, and the server over stdio via rmcp's client | nothing |
 | `tests/cli.rs`, `tests/signals.rs` | exit codes, messages, Chrome's argv, clean stops on signals | nothing |
 | `tests/fixtures.rs` | the readers still match hltv.org markup | Chrome |
-| `scripts/live-check.sh` | both entry points against a live match, sharing one manifest | network + Chrome |
+| `cargo xtask live-check` | both entry points against a live match, sharing one manifest | network + Chrome |
 
 Fixtures are real HTML **trimmed to the subtrees the readers use** (57 KB, down from 746 KB), with
 no scripts, comments, ads, or tracking. Trimming happens during capture, so a page dump cannot land

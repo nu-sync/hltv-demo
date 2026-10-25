@@ -24,7 +24,7 @@ pub struct Match {
 pub struct DemoRef {
     pub match_id: u64,
     pub demo_id: u64,
-    /// Absolute /download/demo/<id> URL.
+    /// Absolute `/download/demo/<id>` URL.
     pub url: String,
     pub match_url: String,
 }
@@ -35,7 +35,7 @@ pub struct Archive {
     pub path: String,
     pub bytes: u64,
     pub demo_url: String,
-    /// HLTV's own file name, e.g. pgl-masters-2026-a-vs-b-bo3-<id>.rar
+    /// HLTV's own file name, e.g. `pgl-masters-bucharest-2026-vitality-vs-9z-bo3-eP_cF4LqZBl7PERj7oPEob.rar`
     pub suggested_name: String,
 }
 
@@ -49,7 +49,7 @@ pub struct ManifestEntry {
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SearchFilter {
-    /// HLTV team id, as in hltv.org/team/<id>/...
+    /// HLTV team id, as in `hltv.org/team/<id>/...`
     pub team: Option<u64>,
     /// Map name, e.g. de_cache or cache (normalized to de_).
     pub map: Option<String>,

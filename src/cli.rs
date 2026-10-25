@@ -42,7 +42,7 @@ pub struct Cli {
 pub enum Command {
     /// List recent matches, newest first
     Search {
-        /// HLTV team id, as in hltv.org/team/<id>/...
+        /// HLTV team id, e.g. 9565 as in hltv.org/team/9565/vitality
         #[arg(long, value_name = "ID")]
         team: Option<u64>,
         /// Map name, e.g. cache or de_cache

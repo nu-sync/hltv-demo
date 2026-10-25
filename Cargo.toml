@@ -1,23 +1,18 @@
-[workspace]
-members = ["xtask"]
-
 [package]
 name = "hltv-demo"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-description = "Find and download professional CS2 demo archives from hltv.org through a real browser"
+rust-version = "1.88"
+description = "Find and download professional CS2 demo archives from hltv.org through a real Chrome"
+repository = "https://github.com/nu-sync/hltv-demo"
+readme = "README.md"
+keywords = ["hltv", "cs2", "counter-strike", "demo", "mcp"]
+categories = ["command-line-utilities"]
+default-run = "hltv-demo"
 publish = false
 
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-name = "hltv-demo"
-path = "src/bin/hltv-demo.rs"
-
-[[bin]]
-name = "hltv-demo-mcp"
-path = "src/bin/hltv-demo-mcp.rs"
+[workspace]
+members = ["xtask"]
 
 [dependencies]
 chromiumoxide = "0.9.1"
